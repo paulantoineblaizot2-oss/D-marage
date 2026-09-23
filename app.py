@@ -5,7 +5,7 @@ import requests
 app = Flask(__name__)
 
 PI_PUBLIC_URL = os.environ.get("PI_PUBLIC_URL", "http://83.114.37.238:50010/trigger-wake")
-SECRET_TOKEN = os.environ.get("SECRET_TOKEN", "1234")
+SECRET_TOKEN = os.environ.get("SECRET_TOKEN", "123")
 
 # Code HTML / CSS du site complet (Design moderne sombre + Page de téléchargement)
 HOME_PAGE = """
