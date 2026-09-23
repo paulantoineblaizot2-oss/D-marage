@@ -5,106 +5,22 @@ import requests
 app = Flask(__name__)
 
 PI_PUBLIC_URL = os.environ.get("PI_PUBLIC_URL", "http://83.114.37.238:50010/trigger-wake")
-SECRET_TOKEN = os.environ.get("SECRET_TOKEN", "123")
+SECRET_TOKEN = os.environ.get("SECRET_TOKEN", "1234")
 
-# Code HTML / CSS du site complet (Design moderne sombre + Page de téléchargement)
-HOME_PAGE = """
-<!DOCTYPE html>
-<html lang="fr">
-<head>
+# Template global inspiré des designs gaming/dark modernes
+BASE_STYLE = """
     <meta charset="UTF-8">
-    <title>Cloud PC Controller - WOL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
+        * { box-sizing: border-box; }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f0f13, #1a1a24);
-            color: #f0f0f5;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .card {
-            background-color: #16161e;
-            padding: 45px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
-            text-align: center;
-            width: 380px;
-            border: 1px solid #2a2a3c;
-        }
-        h1 { margin-top: 0; color: #ffffff; font-size: 24px; letter-spacing: 0.5px; }
-        p { color: #9494b8; font-size: 14px; margin-bottom: 25px; }
-        button, .btn-link {
-            background: linear-gradient(135deg, #ff3344, #cc0011);
-            color: white;
-            border: none;
-            padding: 14px 28px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            width: 100%;
-            box-shadow: 0 4px 15px rgba(255, 51, 68, 0.4);
-            text-decoration: none;
-            display: inline-block;
-            box-sizing: border-box;
-            margin-top: 10px;
-        }
-        button:hover, .btn-link:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(255, 51, 68, 0.6);
-        }
-        .btn-secondary {
-            background: transparent;
-            border: 1px solid #3f3f59;
-            color: #b8b8d0;
-            box-shadow: none;
-            margin-top: 15px;
-        }
-        .btn-secondary:hover {
-            background: #222230;
-            color: white;
-            border-color: #5c5c80;
-            box-shadow: none;
-        }
-        .status { margin-top: 20px; font-size: 13px; font-weight: 500; }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h1>Cloud PC Controller</h1>
-        <p>Allume ton PC fixe à distance en un clic.</p>
-        <form action="/wake" method="POST">
-            <button type="submit">ALLUMER LE PC</button>
-        </form>
-        
-        <a href="/downloads" class="btn-link btn-secondary">📥 Télécharger l'application</a>
-
-        {% if sent %}
-            <p class="status" style="color: #2ecc71;">Signal transmis au Raspberry Pi !</p>
-        {% elif error %}
-            <p class="status" style="color: #e74c3c;">Échec de communication avec le réseau.</p>
-        {% endif %}
-    </div>
-</body>
-</html>
-"""
-
-DOWNLOADS_PAGE = """
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Téléchargements - WOL Controller</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f0f13, #1a1a24);
-            color: #f0f0f5;
+            font-family: 'Outfit', sans-serif;
+            background-color: #0b0f19;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.1) 0px, transparent 50%);
+            color: #f3f4f6;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -112,72 +28,167 @@ DOWNLOADS_PAGE = """
             min-height: 100vh;
             margin: 0;
         }
-        .card {
-            background-color: #16161e;
+        .container {
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            width: 100%;
+            max-width: 420px;
             text-align: center;
-            width: 420px;
-            border: 1px solid #2a2a3c;
         }
-        h1 { margin-top: 0; color: #ffffff; font-size: 22px; }
-        .app-box {
-            background: #1f1f2e;
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin: 15px 0;
+        h1 {
+            margin-top: 0;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: #ffffff;
+            background: linear-gradient(to right, #ffffff, #9ca3af);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        p {
+            color: #9ca3af;
+            font-size: 14px;
+            margin-bottom: 30px;
+        }
+        .btn {
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            color: white;
+            border: none;
+            padding: 14px 20px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            width: 100%;
+            box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+            filter: brightness(1.1);
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #d1d5db;
+            box-shadow: none;
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            box-shadow: none;
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        .badge-status {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+        .success { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .error { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+        .download-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            border: 1px solid #2d2d44;
+            justify-content: space-between;
+            text-align: left;
         }
-        .app-info { text-align: left; }
-        .app-title { font-weight: bold; font-size: 15px; color: #fff; }
-        .app-desc { font-size: 12px; color: #9494b8; }
-        .btn-dl {
-            background-color: #3498db;
+        .download-info .title { font-weight: 600; font-size: 14px; color: #fff; }
+        .download-info .desc { font-size: 12px; color: #9ca3af; }
+        .btn-small {
+            background: #0ea5e9;
             color: white;
             padding: 8px 14px;
-            border-radius: 6px;
-            text-decoration: none;
             font-size: 13px;
-            font-weight: bold;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
             transition: background 0.2s;
         }
-        .btn-dl:hover { background-color: #2980b9; }
-        .btn-dl.disabled { background-color: #444455; color: #888899; cursor: not-allowed; }
+        .btn-small:hover { background: #0284c7; }
+        .btn-small.disabled { background: rgba(255,255,255,0.08); color: #6b7280; cursor: not-allowed; }
         .back-link {
             display: inline-block;
-            margin-top: 20px;
-            color: #9494b8;
+            margin-top: 15px;
+            color: #9ca3af;
             text-decoration: none;
             font-size: 13px;
+            transition: color 0.2s;
         }
         .back-link:hover { color: #fff; }
     </style>
+"""
+
+HOME_PAGE = f"""
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <title>Cloud PC - Control Center</title>
+    {BASE_STYLE}
 </head>
 <body>
-    <div class="card">
-        <h1>Centre de Téléchargement</h1>
-        <p style="color: #9494b8; font-size: 13px; margin-bottom: 20px;">Choisis ta version pour contrôler ton PC partout.</p>
+    <div class="container">
+        <h1>Cloud PC Controller</h1>
+        <p>Interface de réveil à distance sécurisée</p>
         
-        <!-- Version Windows -->
-        <div class="app-box">
-            <div class="app-info">
-                <div class="app-title">💻 Windows (Desktop)</div>
-                <div class="app-desc">Application native PC</div>
+        <form action="/wake" method="POST">
+            <button type="submit" class="btn">⚡ ALLUMER LE PC</button>
+        </form>
+        
+        <a href="/downloads" class="btn btn-secondary">📥 Espace Téléchargements</a>
+
+        {{% if sent %}}
+            <div class="badge-status success">Signal Wake-on-LAN transmis au réseau !</div>
+        {{% elif error %}}
+            <div class="badge-status error">Erreur de communication avec le relais.</div>
+        {{% endif %}}
+    </div>
+</body>
+</html>
+"""
+
+DOWNLOADS_PAGE = f"""
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <title>Téléchargements - Cloud PC</title>
+    {BASE_STYLE}
+</head>
+<body>
+    <div class="container" style="max-width: 460px;">
+        <h1>Téléchargements</h1>
+        <p>Récupère l'application cliente pour tes différents appareils.</p>
+        
+        <!-- Windows -->
+        <div class="download-card">
+            <div class="download-info">
+                <div class="title">💻 Windows Desktop</div>
+                <div class="desc">Application native x64</div>
             </div>
-            <a href="/download/windows" class="btn-dl">Télécharger</a>
+            <a href="/download/windows" class="btn-small">Télécharger</a>
         </div>
 
-        <!-- Version Android -->
-        <div class="app-box">
-            <div class="app-info">
-                <div class="app-title">📱 Android (APK)</div>
-                <div class="app-desc">Bientôt disponible</div>
+        <!-- Android -->
+        <div class="download-card">
+            <div class="download-info">
+                <div class="title">📱 Android APK</div>
+                <div class="desc">Bientôt disponible</div>
             </div>
-            <a href="#" class="btn-dl disabled">Bientôt</a>
+            <a href="#" class="btn-small disabled">Bientôt</a>
         </div>
 
         <a href="/" class="back-link">← Retour au panneau de contrôle</a>
@@ -202,7 +213,7 @@ def wake():
         headers = {"Authorization": f"Bearer {SECRET_TOKEN}"}
         response = requests.post(PI_PUBLIC_URL, headers=headers, timeout=5)
         if response.status_code == 200:
-            success = true
+            success = True
         else:
             error = True
     except Exception:
@@ -210,7 +221,6 @@ def wake():
 
     return render_template_string(HOME_PAGE, sent=success, error=error)
 
-# Route pour télécharger l'application Windows (on va créer le fichier juste après)
 @app.route('/download/windows')
 def download_windows():
     return send_from_directory('static', 'wol-controller-windows.zip', as_attachment=True)
